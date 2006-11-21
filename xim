@@ -296,3 +296,51 @@ print "done\n";
 
 exit;
 
+####################################################################
+
+# Creates the disk image and configuration for a new Xen virtual machine
+#
+# @version 0.1 20060803
+# @author Jonathan Oxer <jon@ivt.com.au>
+# @copyright 2006 Internet Vision Technologies <www.ivt.com.au>
+####################################################################
+# Do some initial setup of values to use
+if($ARGV[0])
+{
+	$vm_name = $ARGV[0];
+}
+else
+{
+	print "Sorry, you need to specify a VM to back up\n";
+	exit;
+}
+
+$storagepath = "/xenimages";
+$vg_name      = "xenimages";
+
+
+####################################################################
+print "Loading snapshot device-mapper kernel module\n";
+`modprobe dm-snapshot`;
+print "done\n";
+
+print "Creating backup mount point...";
+$command = "mkdir -p $storagepath/$vm_name.d/snapshot";
+#print "\nc: $command\n";
+`$command`;
+print "done\n";
+
+print "Creating the snapshot partition ...";
+$vm_disksize = 5;
+$vm_disksizemb = $vm_disksize * 1000;
+$command = "lvcreate -L${vm_disksizemb}M -s -n ${vm_name}-snapshot /dev/$vg_name/${vm_name}-root";
+#print "\nc: $command\n";
+`$command`;
+print "done\n";
+
+print "Mounting snapshot...";
+$command = "mount /dev/$vg_name/${vm_name}-snapshot $storagepath/$vm_name.d/snapshot/";
+#print "\nc: $command\n";
+`$command`;
+print "done\n";
+exit;
