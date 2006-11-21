@@ -39,6 +39,9 @@ if($ARGV[0])
 		case "vcpu-set"  { xm_wrapper() }
 
 		case "build"     { build() }
+		case "demolish"  { demolish() }
+		case "relocate"  { relocate() }
+		case "propagate" { propagate() }
 
 		else             { usage(); exit }
 	}
@@ -119,7 +122,7 @@ sub build {
 	# Check if we have enough arguments
 	if ( ($#ARGV + 1) eq 3 )
 	{
-		print "Let's make a new VM!\n";
+#		print "Let's make a new VM!\n";
 		my $imagegroup = $ARGV[1];
 		my $imagename  = $ARGV[2];
 		my $storagepath = "/" . $imagegroup;
@@ -281,6 +284,43 @@ ff02::3 ip6-allhosts";
 	}
 }
 
+
+####################################################################
+# Demolish an existing VM
+sub demolish {
+	print "Demolishing an existing VM\n";
+	# Check if we have enough arguments
+	if ( ($#ARGV + 1) eq 3 )
+	{
+#		print "Let's make a new VM!\n";
+		my $imagegroup = $ARGV[1];
+		my $imagename  = $ARGV[1];
+		my $storagepath = "/" . $imagegroup;
+#		print "$imagegroup\n";
+	# xm shutdown $imagename
+		# Check if VM is running, loop until it dies
+	# lvremove root
+	# lvremove swap
+	# rm VM dir
+	} else {
+		print "Usage: xim demolish <imagegroup> <imagename>\n";
+	}
+}
+
+
+####################################################################
+# Snapshot an existing VM to push it out to another node
+sub relocate {
+	print "Relocating an existing VM to another node\n";
+}
+
+
+####################################################################
+# Snapshot an existing VM to push it out to another node
+sub propagate {
+	print "Propagating an existing VM to other nodes\n";
+	# lvcreate -L500M -s -n imagename-snapshot /dev/imagegroup/imagename-root
+}
 
 
 
