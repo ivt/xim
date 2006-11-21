@@ -75,25 +75,27 @@ sub xm_wrapper {
 sub usage {
 	print "Sorry, you need to specify a subcommand. Xim supports\n";
 	print "the following standard xm subcommands:\n";
-	print " console\n";
-	print " create\n";
-	print " destroy\n";
-	print " list\n";
-	print " mem-set\n";
-	print " migrate\n";
-	print " pause\n";
-	print " reboot\n";
-	print " restore\n";
-	print " save\n";
-	print " shutdown\n";
-	print " top\n";
-	print " unpause\n";
-	print " vcpu-set\n";
+	print "   console\n";
+	print "   create\n";
+	print "   destroy\n";
+	print "   list\n";
+	print "   mem-set\n";
+	print "   migrate\n";
+	print "   pause\n";
+	print "   reboot\n";
+	print "   restore\n";
+	print "   save\n";
+	print "   shutdown\n";
+	print "   top\n";
+	print "   unpause\n";
+	print "   vcpu-set\n";
 	print "Xim also supports these extended subcommands:\n";
-	print " build <imagegroup> <imagename>                   Create a new VM image and config\n";
-	print " demolish <imagegroup> <imagename>                Destroy a VM and delete all its files\n";
-	print " relocate <imagegroup> <imagename> <targetnode>   Migrate a running VM to another node\n";
-	print " propagate <imagegroup> <imagename> <targetnode>  Make a backup of a VM on another node\n";
+	print "   build <DomGroup> <DomName>              Create a new VM image and config\n";
+	print "   demolish <DomGroup> <DomName>           Destroy a VM and delete all its files\n";
+	print "   relocate <DomGroup> <DomName> <Host>    Migrate a running VM to another node\n";
+	print "   propagate <DomGroup> <DomName> <Host>   Make a backup of a VM on another node\n";
+	print "<DomGroup> is a way to arbitrarily group guest domains: each DomGroup is given\n";
+	print "its own Volume Group in LVM and managed at a separate mount point.\n";
 }
 
 
