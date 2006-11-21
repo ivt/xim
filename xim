@@ -73,10 +73,32 @@ sub xm_wrapper {
 # passed through to XM will result in XM's internal help being
 # returned instead.
 sub usage {
-	print "Sorry, you need to specify a subcommand\n";
+	print "Sorry, you need to specify a subcommand. Xim supports\n";
+	print "the following standard xm subcommands:\n";
+	print " console\n";
+	print " create\n";
+	print " destroy\n";
+	print " list\n";
+	print " mem-set\n";
+	print " migrate\n";
+	print " pause\n";
+	print " reboot\n";
+	print " restore\n";
+	print " save\n";
+	print " shutdown\n";
+	print " top\n";
+	print " unpause\n";
+	print " vcpu-set\n";
+	print "Xim also supports these extended subcommands:\n";
+	print " build <imagegroup> <imagename>                   Create a new VM image and config\n";
+	print " demolish <imagegroup> <imagename>                Destroy a VM and delete all its files\n";
+	print " relocate <imagegroup> <imagename> <targetnode>   Migrate a running VM to another node\n";
+	print " propagate <imagegroup> <imagename> <targetnode>  Make a backup of a VM on another node\n";
 }
 
 
+####################################################################
+# Prompt the user for input and return the result or a default
 sub prompt {
 	my ($promptstring, $defaultvalue) = @_;
 	if ($defaultvalue) {
