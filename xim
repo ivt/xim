@@ -3,6 +3,9 @@ use Switch;
 use strict;
 use warnings;
 
+# Set this to 1 to fake external command execution
+our $dryrun = 1;
+
 ####################################################################
 # xim: Xen Image Manager
 #
@@ -90,6 +93,26 @@ sub prompt {
 }
 
 
+
+####################################################################
+# Execute commands only if we're not in dry-run mode.
+sub runcommand {
+#	my $command = shift;
+	my ($command, $output) = @_;
+	if ($output) {
+		print " * " . $output . "\n";
+	}
+	if ($dryrun eq 1) {
+		# print "dryrun!\n";
+		print "$command\n";
+	} else {
+		# print "live!\n";
+		# print "$command\n";
+		`$command`;
+	}
+}
+
+
 ####################################################################
 # Build a brand new VM
 sub build {
@@ -99,7 +122,7 @@ sub build {
 		print "Let's make a new VM!\n";
 		my $imagegroup = $ARGV[1];
 		my $imagename  = $ARGV[2];
-		my $storagepath = "/" . $imagename;
+		my $storagepath = "/" . $imagegroup;
 #		print "$imagegroup\n";
 #		print "$imagename\n";
 #		print "$storagepath\n";
@@ -137,6 +160,7 @@ sub build {
 		print " DNS server: $vm_resolver\n";
 		print " MAC addr:   $main::vm_mac\n";
 
+		# Give one last chance to bail out before we start changing things
 		my $continue  = prompt ("Continue?:", "Y");
 		$continue =~ tr/A-Z/a-z/;
 		if($continue ne "y")
@@ -144,59 +168,34 @@ sub build {
 			print "OK, bailing out\n";
 			exit 0;
 		}
-		print "continuing\n";
 
+		# Execute the commands to create the VM image
 		my $command = "";
 
-		print "Creating VM directory and mount point...";
 		$command = "mkdir -p $storagepath/$imagename.d/mnt";
-		print "c: $command\n";
-#		`$command`;
-		print "done\n";
+		runcommand ("$command", "Creating VM directory and mount point...");
 
-		print "Creating the target root partition...";
 		my $vm_disksizemb = $vm_disksize * 1000;
 		$command = "lvcreate -L${vm_disksizemb}M -n ${imagename}-root $imagegroup";
-		print "\nc: $command\n";
-#		`$command`;
-		print "done\n";
+		runcommand ("$command", "Creating the target root partition...");
 
-		print "Creating root filesystem on target root partition...";
 		$command = "mkfs.ext3 /dev/$imagegroup/${imagename}-root";
-		print "\nc: $command\n";
-#		`$command`;
-		print "done\n";
+		runcommand ("$command", "Creating root filesystem on target root partition...");
 
-		print "Mounting target root partition...";
 		$command = "mount /dev/$imagegroup/${imagename}-root $storagepath/$imagename.d/mnt/";
-		print "\nc: $command\n";
-#		`$command`;
-		print "done\n";
+		runcommand ("$command", "Mounting target root partition...");
 
-		print "Mounting source filesystem...";
 		$command = "mount /dev/$imagegroup/guest $storagepath/guest/";
-		print "\nc: $command\n";
-#		`$command`;
-		print "done\n";
+		runcommand ("$command", "Mounting source filesystem...");
 
-		print "Copying source filesystem to target filesystem...";
 		$command = "cp -a $storagepath/guest/* $storagepath/$imagename.d/mnt/";
-		print "\nc: $command\n";
-#		`$command`;
-		print "done\n";
+		runcommand ("$command", "Copying source filesystem to target filesystem...");
 
-		print "Creating the swap image...";
-		#$command = "dd if=/dev/zero of=$storagepath/$imagename.d/$imagename-swap.img bs=1024k count=$vm_swapsize >/dev/null";
 		$command = "lvcreate -L{$vm_swapsize}M -n ${imagename}-swap $imagegroup";
-		print "\nc: $command\n";
-#		`$command`;
-		print "done\n";
+		runcommand ("$command", "Creating the swap partition...");
 
-		print "Creating swap filesystem...";
 		$command = "mkswap /dev/$imagegroup/${imagename}-swap";
-		print "c: $command\n";
-#		`$command`;
-		print "done\n";
+		runcommand ("$command", "Creating swap filesystem...");
 
 		# Create Xen conf
 		print "Creating Xen config file...";
