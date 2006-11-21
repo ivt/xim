@@ -1,5 +1,10 @@
 #!/usr/bin/perl
-# create-vm.sh
+use Switch;
+use strict;
+use warnings;
+
+####################################################################
+# xim: Xen Image Manager
 #
 # Creates the disk image and configuration for a new Xen virtual machine
 #
@@ -8,8 +13,67 @@
 # @author Jonathan Oxer <jon@ivt.com.au>
 # @copyright 2006 Internet Vision Technologies <www.ivt.com.au>
 ####################################################################
-$storagepath = "/xenimages";
-$vg_name      = "xenimages";
+# Figure out what command we've been called with. Initially, many of
+# the commands will just be wrappers to xm and will pass arguments
+# through unchanged.
+if($ARGV[0])
+{
+	switch ($ARGV[0])
+	{
+		case "console"   { xm_wrapper() }
+		case "create"    { xm_wrapper() }
+		case "destroy"   { xm_wrapper() }
+		case "list"      { xm_wrapper() }
+		case "mem-set"   { xm_wrapper() }
+#		case "migrate"   { xm_wrapper() }
+		case "pause"     { xm_wrapper() }
+		case "reboot"    { xm_wrapper() }
+		case "restore"   { xm_wrapper() }
+		case "save"      { xm_wrapper() }
+		case "shutdown"  { xm_wrapper() }
+		case "top"       { xm_wrapper() }
+		case "unpause"   { xm_wrapper() }
+		case "vcpu-set"  { xm_wrapper() }
+		else             { usage(); exit }
+	}
+	exit;
+}
+else
+{
+	usage();
+	exit;
+}
+
+
+####################################################################
+# Wrap subcommands and pass them off to XM
+sub xm_wrapper {
+	# Glob all the command line arguments together for XM
+	my $arguments;
+	foreach (@ARGV) {
+		$arguments .= " " . $_;
+	}
+	my $command = "xm" . $arguments;
+#	print "$command\n";
+	`$command`;
+}
+
+
+# Display internal usage info. Note that failed subcommands that
+# are passed through to XM will result in XM's internal help being
+# returned.
+sub usage {
+	print "Sorry, you need to specify a subcommand\n";
+}
+
+
+
+
+
+###################################################################
+# "Below the line": stuff being pulled in from prototype scripts
+my $storagepath = "/xenimages";
+my $vg_name      = "xenimages";
 
 # Prompt for user input for a bunch of settings for this VM
 print "Name for VM: [web1] ";
@@ -63,16 +127,16 @@ if($vm_gateway lt 0)
 
 # Figure out the MAC address based on the IP
 # Split the dotted quads into array elements
-@vm_mac = split(/\./, $vm_ipaddress);
+our @vm_mac = split(/\./, $vm_ipaddress);
 # Make sure each element is padded to three digits so we have a 12-digit number
-@vm_mac[0] = sprintf"%03d",@vm_mac[0];
-@vm_mac[1] = sprintf"%03d",@vm_mac[1];
-@vm_mac[2] = sprintf"%03d",@vm_mac[2];
-@vm_mac[3] = sprintf"%03d",@vm_mac[3];
+$vm_mac[0] = sprintf"%03d",$vm_mac[0];
+$vm_mac[1] = sprintf"%03d",$vm_mac[1];
+$vm_mac[2] = sprintf"%03d",$vm_mac[2];
+$vm_mac[3] = sprintf"%03d",$vm_mac[3];
 # Put the elements back together as one long string
-$vm_mac = join("", @vm_mac);
+$main::vm_mac = join("", @vm_mac);
 # Chunk split the string into colon separated pairs of digits
-$vm_mac = substr($vm_mac, 0, 2).":".substr($vm_mac, 2, 2).":".substr($vm_mac, 4, 2).":".substr($vm_mac, 6, 2).":".substr($vm_mac, 8, 2).":".substr($vm_mac, 10, 2);
+$main::vm_mac = substr($main::vm_mac, 0, 2).":".substr($main::vm_mac, 2, 2).":".substr($main::vm_mac, 4, 2).":".substr($main::vm_mac, 6, 2).":".substr($main::vm_mac, 8, 2).":".substr($main::vm_mac, 10, 2);
 
 # Show what values we're going to use
 print "Values for the new VM will be:\n";
@@ -83,7 +147,7 @@ print " RAM Size:   $vm_ram MB\n";
 print " IP Address: $vm_ipaddress\n";
 print " Netmask:    $vm_netmask\n";
 print " Gateway:    $vm_gateway\n";
-print " MAC addr:   $vm_mac\n";
+print " MAC addr:   $main::vm_mac\n";
 print "Continue? [Y|n]: ";
 chomp(my $continue = <>);
 if($continue lt 0)
@@ -99,52 +163,54 @@ if($continue ne "y")
 
 #print "continuing\n";
 
+my $command = "";
+
 print "Creating VM directory and mount point...";
-my $command = "mkdir -p $storagepath/$vm_name.d/mnt";
+$command = "mkdir -p $storagepath/$vm_name.d/mnt";
 print "c: $command\n";
 `$command`;
 print "done\n";
 
 print "Creating the target root partition...";
-$vm_disksizemb = $vm_disksize * 1000;
-my $command = "lvcreate -L$vm_disksizemb -n${vm_name}-root $vg_name";
+my $vm_disksizemb = $vm_disksize * 1000;
+$command = "lvcreate -L$vm_disksizemb -n${vm_name}-root $vg_name";
 print "\nc: $command\n";
 `$command`;
 print "done\n";
 
 print "Creating root filesystem on target root partition...";
-my $command = "mkfs.ext3 /dev/$vg_name/${vm_name}-root";
+$command = "mkfs.ext3 /dev/$vg_name/${vm_name}-root";
 print "\nc: $command\n";
 `$command`;
 print "done\n";
 
 print "Mounting target root partition...";
-my $command = "mount /dev/$vg_name/${vm_name}-root $storagepath/$vm_name.d/mnt/";
+$command = "mount /dev/$vg_name/${vm_name}-root $storagepath/$vm_name.d/mnt/";
 print "\nc: $command\n";
 `$command`;
 print "done\n";
 
 print "Mounting source filesystem...";
-my $command = "mount /dev/$vg_name/guest $storagepath/guest/";
+$command = "mount /dev/$vg_name/guest $storagepath/guest/";
 print "\nc: $command\n";
 `$command`;
 print "done\n";
 
 print "Copying source filesystem to target filesystem...";
-my $command = "cp -a $storagepath/guest/* $storagepath/$vm_name.d/mnt/";
+$command = "cp -a $storagepath/guest/* $storagepath/$vm_name.d/mnt/";
 print "\nc: $command\n";
 `$command`;
 print "done\n";
 
 print "Creating the swap image...";
-#my $command = "dd if=/dev/zero of=$storagepath/$vm_name.d/$vm_name-swap.img bs=1024k count=$vm_swapsize >/dev/null";
-my $command = "lvcreate -L$vm_swapsize -n${vm_name}-swap $vg_name";
+#$command = "dd if=/dev/zero of=$storagepath/$vm_name.d/$vm_name-swap.img bs=1024k count=$vm_swapsize >/dev/null";
+$command = "lvcreate -L$vm_swapsize -n${vm_name}-swap $vg_name";
 print "\nc: $command\n";
 `$command`;
 print "done\n";
 
 print "Creating swap filesystem...";
-my $command = "mkswap /dev/$vg_name/${vm_name}-swap";
+$command = "mkswap /dev/$vg_name/${vm_name}-swap";
 print "c: $command\n";
 `$command`;
 print "done\n";
@@ -156,7 +222,7 @@ kernel = \"/boot/vmlinuz-2.6.16-xen\"
 ramdisk = \"/boot/initrd-2.6.16-xen.img\"
 memory = $vm_ram
 name = \"$vm_name\"
-vif = ['mac=$vm_mac,bridge=xenbr0']
+vif = ['mac=$main::vm_mac,bridge=xenbr0']
 disk = ['phy:$vg_name/${vm_name}-root,hda1,w','phy:$vg_name/${vm_name}-swap,hda2,w']
 ip = \"$vm_ipaddress\"
 netmask = \"$vm_netmask\"
@@ -171,7 +237,7 @@ print "done\n";
 
 # Create interfaces
 print "Creating /etc/network/interfaces...";
-$vm_netconfig = "# The loopback network interface
+my $vm_netconfig = "# The loopback network interface
 auto lo
 iface lo inet loopback
 
@@ -190,7 +256,7 @@ print "done\n";
 
 # Create hostname
 print "Creating /etc/hostname...";
-$vm_hostnameconfig = "$vm_name";
+my $vm_hostnameconfig = "$vm_name";
 open (CONFIGFILE, ">$storagepath/$vm_name.d/mnt/etc/hostname");
 print CONFIGFILE $vm_hostnameconfig;
 close (CONFIGFILE);
@@ -198,7 +264,7 @@ print "done\n";
 
 # Create hosts
 print "Creating /etc/hosts...";
-$vm_hostsconfig = "127.0.0.1       localhost localhost.localdomain
+my $vm_hostsconfig = "127.0.0.1       localhost localhost.localdomain
 127.0.0.1       $vm_name
 221.133.213.9	cache
 
@@ -223,7 +289,7 @@ print "done\n";
 
 # Unmount source and target
 print "Unmounting source and target filesystems...";
-my $command = "sync; umount $storagepath/$vm_name.d/mnt; umount $storagepath/guest";
+$command = "sync; umount $storagepath/$vm_name.d/mnt; umount $storagepath/guest";
 `$command`;
 print "done\n";
 
