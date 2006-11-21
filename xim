@@ -237,9 +237,11 @@ gateway = \"$vm_gateway\"
 hostname = \"$imagename\"
 root = \"/dev/hda1 ro\"
 extra = \"4\"";
-#		open (CONFIGFILE, ">$storagepath/$imagename.d/$imagename");
-#		print CONFIGFILE $vm_xenconfig;
-#		close (CONFIGFILE);
+		if($dryrun ne 1) {
+			open (CONFIGFILE, ">$storagepath/$imagename.d/$imagename");
+			print CONFIGFILE $vm_xenconfig;
+			close (CONFIGFILE);
+		}
 		print "done\n";
 
 		# Create interfaces
@@ -256,17 +258,21 @@ iface eth0 inet static
 		gateway $vm_gateway
 #        broadcast 1.0.1.255
 #        dns-nameservers 192.168.0.1";
-#		open (CONFIGFILE, ">$storagepath/$imagename.d/mnt/etc/network/interfaces");
-#		print CONFIGFILE $vm_netconfig;
-#		close (CONFIGFILE);
+		if($dryrun ne 1) {
+			open (CONFIGFILE, ">$storagepath/$imagename.d/mnt/etc/network/interfaces");
+			print CONFIGFILE $vm_netconfig;
+			close (CONFIGFILE);
+		}
 		print "done\n";
 
 		# Create hostname
 		print "Creating /etc/hostname...";
 		my $vm_hostnameconfig = "$imagename";
-#		open (CONFIGFILE, ">$storagepath/$imagename.d/mnt/etc/hostname");
-#		print CONFIGFILE $vm_hostnameconfig;
-#		close (CONFIGFILE);
+		if($dryrun ne 1) {
+			open (CONFIGFILE, ">$storagepath/$imagename.d/mnt/etc/hostname");
+			print CONFIGFILE $vm_hostnameconfig;
+			close (CONFIGFILE);
+		}
 		print "done\n";
 
 		# Create hosts
@@ -282,9 +288,11 @@ ff00::0 ip6-mcastprefix
 ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
 ff02::3 ip6-allhosts";
-#		open (CONFIGFILE, ">$storagepath/$imagename.d/mnt/etc/hosts");
-#		print CONFIGFILE $vm_hostsconfig;
-#		close (CONFIGFILE);
+		if($dryrun ne 1) {
+			open (CONFIGFILE, ">$storagepath/$imagename.d/mnt/etc/hosts");
+			print CONFIGFILE $vm_hostsconfig;
+			close (CONFIGFILE);
+		}
 		print "done\n";
 
 		# Create symlink for Xen
@@ -295,11 +303,8 @@ ff02::3 ip6-allhosts";
 		#print "done\n";
 
 		# Unmount source and target
-		print "Unmounting source and target filesystems...";
 		$command = "sync; umount $storagepath/$imagename.d/mnt; umount $storagepath/guest";
-#		`$command`;
-		print "done\n";
-
+		runcommand ("$command", "Unmounting source and target filesystems...");
 
 	} else {
 		print "Usage: xim build <imagegroup> <imagename>\n";
