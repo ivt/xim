@@ -344,9 +344,11 @@ sub demolish {
 		$command = "lvremove /dev/${imagegroup}/${imagename}-root";
 		runcommand ("$command", "Removing root partition...");
 
+		# Remove swap
 		$command = "lvremove /dev/${imagegroup}/${imagename}-swap";
 		runcommand ("$command", "Removing swap partition...");
 
+		# Remove the config directory
 		$command = "rm -Rf /${imagegroup}/${imagename}.d";
 		runcommand ("$command", "Removing config directory...");
 	} else {
@@ -368,8 +370,32 @@ sub relocate {
 ####################################################################
 # Snapshot an existing VM to push it out to another node
 sub propagate {
-	print "Propagating an existing VM to other nodes\n";
-	# lvcreate -L500M -s -n imagename-snapshot /dev/imagegroup/imagename-root
+	# Check if we have enough arguments
+	if ( ($#ARGV + 1) eq 3 )
+	{
+		my $imagegroup = $ARGV[1];
+		my $imagename  = $ARGV[2];
+		print "Propagating '${imagegroup}/${imagename}' to '${node}'\n";
+		# lvcreate -L500M -s -n imagename-snapshot /dev/imagegroup/imagename-root
+
+		$command = "modprobe dm-snapshot";
+		runcommand ("$command", "Loading snapshot device-mapper kernel module...");
+
+		$command = "mkdir -p $storagepath/$imagename.d/snapshot";
+		runcommand ("$command", "Creating backup mount point...");
+
+		my $vm_disksize = 5;
+		my $vm_disksizemb = $vm_disksize * 1000;
+		$command = "lvcreate -L${vm_disksizemb}M -s -n ${imagename}-snapshot /dev/$imagegroup/${imagename}-root";
+		runcommand ("$command", "Creating the snapshot partition...");
+
+		$command = "mount /dev/$imagegroup/${imagename}-snapshot $storagepath/$imagename.d/snapshot/";
+		runcommand ("$command", "Mounting snapshot...");
+	} else {
+		print "Usage: xim propagate <imagegroup> <imagename> [Host]\n";
+		print "   'propagate' copies the config and partitions of a VM to another\n";
+		print "   node. If a copy already exists on the remote node it's updated.\n";
+	}
 }
 
 
@@ -378,32 +404,8 @@ sub propagate {
 ####################################################################
 ###################################################################
 # "Below the line": stuff being pulled in from prototype scripts
-my $storagepath = "/xenimages";
-my $imagegroup      = "xenimages";
-
-# Prompt for user input for a bunch of settings for this VM
-print "Name for VM: [web1] ";
-chomp(my $imagename = <>);
-if($imagename lt 0)
-{
-	$imagename = "web1";
-}
-
-
-my $command = "";
-
-
-exit;
-
-####################################################################
-
-# Creates the disk image and configuration for a new Xen virtual machine
-#
-# @version 0.1 20060803
-# @author Jonathan Oxer <jon@ivt.com.au>
-# @copyright 2006 Internet Vision Technologies <www.ivt.com.au>
-####################################################################
 # Do some initial setup of values to use
+
 if($ARGV[0])
 {
 	$imagename = $ARGV[0];
@@ -419,27 +421,4 @@ $imagegroup      = "xenimages";
 
 
 ####################################################################
-print "Loading snapshot device-mapper kernel module\n";
-`modprobe dm-snapshot`;
-print "done\n";
-
-print "Creating backup mount point...";
-$command = "mkdir -p $storagepath/$imagename.d/snapshot";
-#print "\nc: $command\n";
-`$command`;
-print "done\n";
-
-print "Creating the snapshot partition ...";
-my $vm_disksize = 5;
-my $vm_disksizemb = $vm_disksize * 1000;
-$command = "lvcreate -L${vm_disksizemb}M -s -n ${imagename}-snapshot /dev/$imagegroup/${imagename}-root";
-#print "\nc: $command\n";
-`$command`;
-print "done\n";
-
-print "Mounting snapshot...";
-$command = "mount /dev/$imagegroup/${imagename}-snapshot $storagepath/$imagename.d/snapshot/";
-#print "\nc: $command\n";
-`$command`;
-print "done\n";
 exit;
