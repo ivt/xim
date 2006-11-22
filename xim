@@ -375,8 +375,12 @@ sub propagate {
 	{
 		my $imagegroup = $ARGV[1];
 		my $imagename  = $ARGV[2];
+		my $node       = $ARGV[3];
+		my $storagepath = "/".${imagegroup};
 		print "Propagating '${imagegroup}/${imagename}' to '${node}'\n";
 		# lvcreate -L500M -s -n imagename-snapshot /dev/imagegroup/imagename-root
+
+		my $command = "";
 
 		$command = "modprobe dm-snapshot";
 		runcommand ("$command", "Loading snapshot device-mapper kernel module...");
@@ -391,6 +395,10 @@ sub propagate {
 
 		$command = "mount /dev/$imagegroup/${imagename}-snapshot $storagepath/$imagename.d/snapshot/";
 		runcommand ("$command", "Mounting snapshot...");
+
+		$command = "mkdir -p $storagepath/$imagename.d/snapshot";
+		runcommand ("$command", "Creating backup mount point...");
+
 	} else {
 		print "Usage: xim propagate <imagegroup> <imagename> [Host]\n";
 		print "   'propagate' copies the config and partitions of a VM to another\n";
@@ -400,25 +408,3 @@ sub propagate {
 
 
 
-####################################################################
-####################################################################
-###################################################################
-# "Below the line": stuff being pulled in from prototype scripts
-# Do some initial setup of values to use
-
-if($ARGV[0])
-{
-	$imagename = $ARGV[0];
-}
-else
-{
-	print "Sorry, you need to specify a VM to back up\n";
-	exit;
-}
-
-$storagepath = "/xenimages";
-$imagegroup      = "xenimages";
-
-
-####################################################################
-exit;
