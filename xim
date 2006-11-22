@@ -317,22 +317,43 @@ ff02::3 ip6-allhosts";
 ####################################################################
 # Demolish an existing VM
 sub demolish {
-	print "Demolishing an existing VM\n";
 	# Check if we have enough arguments
-	if ( ($#ARGV + 1) eq 3 )
+	if ( ( ($#ARGV + 1) eq 3 ) or ( ($#ARGV + 1) eq 4) )
 	{
-#		print "Let's make a new VM!\n";
 		my $imagegroup = $ARGV[1];
-		my $imagename  = $ARGV[1];
+		my $imagename  = $ARGV[2];
 		my $storagepath = "/" . $imagegroup;
-#		print "$imagegroup\n";
-	# xm shutdown $imagename
-		# Check if VM is running, loop until it dies
-	# lvremove root
-	# lvremove swap
-	# rm VM dir
+
+		# Set the default node to localhost but allow the third argument to override it
+		my $node = "localhost";
+		if ( ($#ARGV + 1) eq 4 )
+		{
+			$node  = $ARGV[3];
+		}
+
+		print "Demolishing '${imagegroup}/${imagename}' on '${node}'\n";
+
+		my $command = "";
+
+		# Destroy the image in case it's running. Since we're nuking it anyway we
+		# don't need to bring it down cleanly or wait politely
+		$command = "xm destroy $imagename";
+		runcommand ("$command", "Destroying image...");
+
+		# lvremove root
+		$command = "lvremove /dev/${imagegroup}/${imagename}-root";
+		runcommand ("$command", "Removing root partition...");
+
+		$command = "lvremove /dev/${imagegroup}/${imagename}-swap";
+		runcommand ("$command", "Removing swap partition...");
+
+		$command = "rm -Rf /${imagegroup}/${imagename}.d";
+		runcommand ("$command", "Removing config directory...");
 	} else {
-		print "Usage: xim demolish <imagegroup> <imagename>\n";
+		print "Usage: xim demolish <imagegroup> <imagename> [Host]\n";
+		print "   'demolish' will remove all traces of a VM from a specific node, or from\n";
+		print "   localhost if no host is specified: it destroys the running image if it\n";
+		print "   exists, then removes the config directory and partitions.\n";
 	}
 }
 
