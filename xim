@@ -5,6 +5,7 @@ use warnings;
 
 # Set this to 1 to fake external command execution
 our $dryrun = 1;
+our $debug  = 1;
 
 ####################################################################
 # xim: Xen Image Manager
@@ -129,12 +130,10 @@ sub runcommand {
 	if ($output) {
 		print " * " . $output . "\n";
 	}
-	if ($dryrun eq 1) {
-		# print "dryrun!\n";
+	if ($debug eq 1) {
 		print "$command\n";
-	} else {
-		# print "live!\n";
-		# print "$command\n";
+	}
+	if ($dryrun eq 1) {
 		`$command`;
 	}
 }
@@ -371,7 +370,7 @@ sub relocate {
 # Snapshot an existing VM to push it out to another node
 sub propagate {
 	# Check if we have enough arguments
-	if ( ($#ARGV + 1) eq 3 )
+	if ( ($#ARGV + 1) eq 4 )
 	{
 		my $imagegroup = $ARGV[1];
 		my $imagename  = $ARGV[2];
@@ -399,6 +398,38 @@ sub propagate {
 		$command = "mkdir -p $storagepath/$imagename.d/snapshot";
 		runcommand ("$command", "Creating backup mount point...");
 #www.arsgeek.com/?p=650
+		
+		$command = "";
+		runcommand ("$command", "Making VM directory on target node...");
+
+		$command = "";
+		runcommand ("$command", "Making VM mount point on target node...");
+
+		#if (!remote partition) {
+			$command = "";
+			runcommand ("$command", "Creating VM root partition on target node...");
+
+			$command = "";
+			runcommand ("$command", "Creating VM root filesystem on target node...");
+		#}
+
+		$command = "";
+		runcommand ("$command", "Mounting VM root on target node...");
+
+		$command = "";
+		runcommand ("$command", "Pushing root filesystem to target node...");
+
+		$command = "";
+		runcommand ("$command", "Copying config file to target node...");
+
+		$command = "";
+		runcommand ("$command", "Unmounting VM snapshot...");
+
+		$command = "";
+		runcommand ("$command", "Unmounting root filesystem on target node...");
+
+		$command = "";
+		runcommand ("$command", "...");
 
 	} else {
 		print "Usage: xim propagate <imagegroup> <imagename> [Host]\n";
