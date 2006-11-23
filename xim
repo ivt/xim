@@ -393,6 +393,7 @@ sub propagate {
 		$command = "mkdir -p $storagepath/$imagename.d/snapshot";
 		runcommand ("$command", "Creating backup mount point...");
 
+		# We're hard-coding a disk image size here, which is bad. Need to check size of local partition
 		my $vm_disksize = 5;
 		my $vm_disksizemb = $vm_disksize * 1000;
 		$command = "lvcreate -L${vm_disksizemb}M -s -n ${imagename}-snapshot /dev/$imagegroup/${imagename}-root";
@@ -425,7 +426,7 @@ sub propagate {
 		$command = "sync; umount ${storagepath}/${imagename}.d/snapshot";
 		runcommand ("$command", "Unmounting VM snapshot...");
 
-		$command = "ssh root\@${node} sync; umount ${storagepath}/${imagename}.d/mnt";
+		$command = "ssh root\@${node} \"sync; umount ${storagepath}/${imagename}.d/mnt\"";
 		runcommand ("$command", "Unmounting root filesystem on target node...");
 
 #		$command = "";
