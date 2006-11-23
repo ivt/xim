@@ -6,6 +6,7 @@ use warnings;
 # Set this to 1 to fake external command execution
 our $dryrun = 1;
 our $debug  = 1;
+our $silent = 0;
 
 ####################################################################
 # xim: Xen Image Manager
@@ -128,7 +129,7 @@ sub runcommand {
 	my ($command, $output) = @_;
 
 	# Display some text to the user
-	if ($output) {
+	if (($output) && ($silent ne 1)) {
 		print " * " . $output . "\n";
 	}
 
