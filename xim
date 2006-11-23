@@ -404,37 +404,34 @@ sub propagate {
 		runcommand ("$command", "Creating backup mount point...");
 #www.arsgeek.com/?p=650
 		
-		$command = "";
-		runcommand ("$command", "Making VM directory on target node...");
-
-		$command = "";
-		runcommand ("$command", "Making VM mount point on target node...");
+		$command = "ssh root\@${node} mkdir -p ${imagegroup}/${imagename}.d/mnt";
+		runcommand ("$command", "Making VM directory and mount point on target node...");
 
 		#if (!remote partition) {
-			$command = "";
+			$command = "ssh root\@${node} lvcreate -L${vm_disksizemb}M -n ${imagename}-root ${imagegroup}";
 			runcommand ("$command", "Creating VM root partition on target node...");
 
-			$command = "";
+			$command = "ssh root\@${node} mkfs.ext3 /dev/${imagegroup}/${imagename}-root";
 			runcommand ("$command", "Creating VM root filesystem on target node...");
 		#}
 
-		$command = "";
+		$command = "ssh root\@${node} mount /dev/${imagegroup}/${imagename}-root ${storagepath}/${imagename}.d/mnt";
 		runcommand ("$command", "Mounting VM root on target node...");
 
-		$command = "";
+		$command = "rsync -e ssh -az $storagepath/${imagename}.d/snapshot root\@${node}:${storagepath}/${imagename}.d/mnt";
 		runcommand ("$command", "Pushing root filesystem to target node...");
 
-		$command = "";
+		$command = "scp $storagepath/${imagename}.d/${imagename} root\@${node}:${storagepath}/${imagename}.d/";
 		runcommand ("$command", "Copying config file to target node...");
 
-		$command = "";
+		$command = "sync; umount ${storagepath}/${imagename}.d/snapshot";
 		runcommand ("$command", "Unmounting VM snapshot...");
 
-		$command = "";
+		$command = "ssh root\@${node} sync; umount ${storagepath}/${imagename}.d/mnt";
 		runcommand ("$command", "Unmounting root filesystem on target node...");
 
-		$command = "";
-		runcommand ("$command", "...");
+#		$command = "";
+#		runcommand ("$command", "...");
 
 	} else {
 		print "Usage: xim propagate <imagegroup> <imagename> [Host]\n";
