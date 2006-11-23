@@ -4,9 +4,9 @@ use strict;
 use warnings;
 
 # Set this to 1 to fake external command execution
-our $dryrun = 1;
-our $debug  = 1;
-our $silent = 1;
+our $dryrun = 0;
+our $debug  = 0;
+our $silent = 0;
 
 ####################################################################
 # xim: Xen Image Manager
@@ -395,7 +395,7 @@ sub propagate {
 
 		# We're hard-coding a disk image size here, which is bad. Need to check size of local partition
 		#my $vm_disksize = `lvdisplay /dev/${imagegroup}/${imagename}-root | grep "LV Size" | awk '\{print \$3\}'`;
-		my $vm_disksize = 5;
+		my $vm_disksize = 19.53;
 		my $vm_disksizemb = $vm_disksize * 1000;
 		$command = "lvcreate -L${vm_disksizemb}M -s -n ${imagename}-snapshot /dev/$imagegroup/${imagename}-root";
 		$command = "lvcreate -L2000M -s -n \"${imagename}-snapshot\" /dev/$imagegroup/${imagename}-root";
