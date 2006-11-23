@@ -125,15 +125,20 @@ sub prompt {
 ####################################################################
 # Execute commands only if we're not in dry-run mode.
 sub runcommand {
-#	my $command = shift;
 	my ($command, $output) = @_;
+
+	# Display some text to the user
 	if ($output) {
 		print " * " . $output . "\n";
 	}
+
+	# Print debug output
 	if ($debug eq 1) {
 		print "$command\n";
 	}
-	if ($dryrun eq 1) {
+
+	# Execute the requested command
+	if ($dryrun ne 1) {
 		`$command`;
 	}
 }
