@@ -211,7 +211,7 @@ sub build {
 		$command = "lvcreate -L${vm_disksizemb}M -n ${imagename}-root $imagegroup";
 		runcommand ("$command", "Creating the target root partition...");
 
-		$command = "mkfs.ext3 /dev/$imagegroup/${imagename}-root";
+		$command = "mkfs.ext3 /dev/mapper/${imagegroup}-${imagename}--root";
 		runcommand ("$command", "Creating root filesystem on target root partition...");
 
 		$command = "mount /dev/$imagegroup/${imagename}-root $storagepath/$imagename.d/mnt/";
@@ -398,9 +398,10 @@ sub propagate {
 		my $vm_disksize = 5;
 		my $vm_disksizemb = $vm_disksize * 1000;
 		$command = "lvcreate -L${vm_disksizemb}M -s -n ${imagename}-snapshot /dev/$imagegroup/${imagename}-root";
+		$command = "lvcreate -L2000M -s -n \"${imagename}-snapshot\" /dev/$imagegroup/${imagename}-root";
 		runcommand ("$command", "Creating the snapshot partition...");
 
-		$command = "mount /dev/$imagegroup/${imagename}-snapshot $storagepath/$imagename.d/snapshot/";
+		$command = "mount /dev/mapper/${imagegroup}-${imagename}--snapshot $storagepath/$imagename.d/snapshot/";
 		runcommand ("$command", "Mounting snapshot...");
 #www.arsgeek.com/?p=650
 		
@@ -408,14 +409,14 @@ sub propagate {
 		runcommand ("$command", "Making VM directory and mount point on target node...");
 
 		#if (!remote partition) {
-			$command = "ssh root\@${node} lvcreate -L${vm_disksizemb}M -n ${imagename}-root ${imagegroup}";
+			$command = "ssh root\@${node} lvcreate -L${vm_disksizemb}M -n \"${imagename}-root\" ${imagegroup}";
 			runcommand ("$command", "Creating VM root partition on target node...");
 
-			$command = "ssh root\@${node} mkfs.ext3 /dev/${imagegroup}/${imagename}-root";
+			$command = "ssh root\@${node} mkfs.ext3 /dev/mapper/${imagegroup}-${imagename}--root";
 			runcommand ("$command", "Creating VM root filesystem on target node...");
 		#}
 
-		$command = "ssh root\@${node} mount /dev/${imagegroup}/${imagename}-root ${storagepath}/${imagename}.d/mnt";
+		$command = "ssh root\@${node} mount /dev/mapper/${imagegroup}-${imagename}--root ${storagepath}/${imagename}.d/mnt";
 		runcommand ("$command", "Mounting VM root on target node...");
 
 		$command = "rsync -e ssh -az $storagepath/${imagename}.d/snapshot/ root\@${node}:${storagepath}/${imagename}.d/mnt";
