@@ -431,7 +431,7 @@ sub propagate {
 		$command = "lvremove -f /dev/${imagegroup}/${imagename}-snapshot";
 		runcommand ("$command", "Removing snapshot partition...");
 
-		$command = "ssh root\@${node} \"sync; umount ${storagepath}/${imagename}.d/mnt\"";
+		$command = "ssh root\@${node} \"umount ${storagepath}/${imagename}.d/mnt\"";
 		runcommand ("$command", "Unmounting root filesystem on target node...");
 
 #		$command = "";
