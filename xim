@@ -127,6 +127,7 @@ sub prompt {
 # Execute commands only if we're not in dry-run mode.
 sub runcommand {
 	my ($command, $output) = @_;
+	my $result = "";
 
 	# Display some text to the user
 	if (($output) && ($silent ne 1)) {
@@ -140,8 +141,31 @@ sub runcommand {
 
 	# Execute the requested command
 	if ($dryrun ne 1) {
-		`$command`;
+		$result = `$command`;
 	}
+	return ($result);
+}
+
+sub runcommand2 {
+	my ($command, $output) = @_;
+	my $result = "";
+
+	# Display some text to the user
+	if (($output) && ($silent ne 1)) {
+		print " * " . $output . "\n";
+	}
+
+	# Print debug output
+	if ($debug eq 1) {
+		print "$command\n";
+	}
+
+	# Execute the requested command
+	if ($dryrun ne 2) {
+		$result = `$command`;
+	}
+	chomp($result);
+	return ($result);
 }
 
 
@@ -408,13 +432,18 @@ sub propagate {
 		$command = "ssh root\@${node} mkdir -p ${storagepath}/${imagename}.d/mnt";
 		runcommand ("$command", "Making VM directory and mount point on target node...");
 
-		#if (!remote partition) {
+		my $partitionexists = 0;
+		$command = "ssh root\@${node} lvscan | grep ${imagename}-root | wc -l";
+		$partitionexists = runcommand ("$command", "Checking for VM root partition on target node...");
+		print "e: $partitionexists\n";
+
+		if ($partitionexists eq 0) {
 			$command = "ssh root\@${node} lvcreate -L${vm_disksizemb}M -n \"${imagename}-root\" ${imagegroup}";
 			runcommand ("$command", "Creating VM root partition on target node...");
 
 			$command = "ssh root\@${node} mkfs.ext3 /dev/mapper/${imagegroup}-${imagename}--root";
 			runcommand ("$command", "Creating VM root filesystem on target node...");
-		#}
+		}
 
 		$command = "ssh root\@${node} mount /dev/mapper/${imagegroup}-${imagename}--root ${storagepath}/${imagename}.d/mnt";
 		runcommand ("$command", "Mounting VM root on target node...");
