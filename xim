@@ -52,7 +52,6 @@ if($ARGV[0])
 
 		# Direct access to internal functions for testing
 		case "parse_vmlist"   { parse_vmlist() }
-		case "parse_hostlist" { parse_hostlist() }
 		case "survey_host"    { survey_host() }
 
 		else             { usage(); exit }
@@ -520,32 +519,6 @@ sub parse_vmlist {
 }
 
 
-####################################################################
-sub parse_hostlist {
-	my $hostlist_file = "/etc/xim/hostlist.conf";
-	my @hostlist;
-	#my $hostdetails;
-	open HOSTLIST, $hostlist_file or die $!;
-
-	while (<HOSTLIST>)
-	{
-		s/#.*$//;	# Kill off comments
-		s/^\s+//;	# Kill off leading spaces
-		s/\s+$//;	# Kill off trailing spaces
-		if ($_)
-		{
-			#my ($hostname, $ipaddress) = split(/s*,s*/); # Split out the values for each host
-			#$hostdetails = ($_);
-			push(@hostlist, $_);
-			#print "val: $hostname | $ipaddress |\n";
-		}
-	}
-
-	close HOSTLIST;
-	#print @hostlist;
-	return @hostlist;
-}
-
 
 ####################################################################
 sub survey_host {
@@ -555,15 +528,16 @@ sub survey_host {
 
 ####################################################################
 sub survey {
-	my @hostlist = parse_hostlist();
-	my $hostdetails;
-	foreach $hostdetails (@hostlist)
-	{
-		my ($hostname, $ipaddress) = split(/s*,s*/, $hostdetails);
-		print $hostdetails."\n";
-		#print $hostname."\n";
-		#print $ipaddress."\n";
-		#print "\n";
+	# Read the list of hosts
+	my $hostlist_file = "/etc/xim/hostlist.csv";
+
+	my $csv = Text::CSV->new();
+	open (CSV, "<", $hostlist_file) or die $!;
+	
+	while (<CSV>) {
+		$csv->parse($_);
+		my @columns = $csv->fields();
+		print "Host: $columns[0]\nIP: $columns[1]\n\n";
 	}
 }
 
