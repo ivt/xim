@@ -525,14 +525,34 @@ sub survey_host {
 	my $ipaddress = shift(@_);
 	my $command;
 	my $output;
+	my @imagelist;
+	my $imageline;
+	my $imagename;
+	my $imagesize;
+	my $output;
 
-	#print "h: $ipaddress\n";
 	$command = "ssh root\@${ipaddress} lvscan | grep '\\-root'";
 	$output = runcommand ("$command", "Checking for existing root images...");
-	print $output;
+	@imagelist = split(/\n/, $output);
+	foreach $imageline (@imagelist) {
+		print "l: $imageline\n";
+		# Extract the name of the VM and the image size
+		if ( $imageline =~ m/(\w*)-root' \[(\d*\.\d* \w*)/ ) {
+			$imagename = $1;
+			$imagesize = $2;
+			print "i: $imagename\n";
+			print "s: $imagesize\n";
+			
+			$output .= "Name: $imagename\n";
+		}
+	}
+	#print @imagelist;
+	#print $output;
+
 	$command = "ssh root\@${ipaddress} xm list | grep -v 'Domain-0' | grep -v 'Name'";
 	$output = runcommand ("$command", "Checking for running VMs...");
 	print $output;
+
 	print "\n\n";
 }
 
