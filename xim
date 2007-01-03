@@ -1,10 +1,11 @@
 #!/usr/bin/perl
 use Switch;
+use Text::CSV;
 use strict;
 use warnings;
 
 # Set this to 1 to fake external command execution
-our $dryrun = 1;
+our $dryrun = 0;
 our $debug  = 1;
 our $silent = 1;
 
@@ -17,6 +18,7 @@ our $silent = 1;
 # @version 0.2 20060905
 # @author Jonathan Oxer <jon@ivt.com.au>
 # @copyright 2006 Internet Vision Technologies <www.ivt.com.au>
+# cpan install Text::CSV
 ####################################################################
 # Figure out what command we've been called with. Initially, many of
 # the commands will just be wrappers to xm and will pass arguments
@@ -25,6 +27,7 @@ if($ARGV[0])
 {
 	switch ($ARGV[0])
 	{
+		# Commands passed through to xm
 		case "console"   { xm_wrapper() }
 		case "create"    { xm_wrapper() }
 		case "destroy"   { xm_wrapper() }
@@ -40,10 +43,17 @@ if($ARGV[0])
 		case "unpause"   { xm_wrapper() }
 		case "vcpu-set"  { xm_wrapper() }
 
+		# Native Xim operations
+		case "survey"    { survey() }
 		case "build"     { build() }
 		case "demolish"  { demolish() }
 		case "relocate"  { relocate() }
 		case "propagate" { propagate() }
+
+		# Direct access to internal functions for testing
+		case "parse_vmlist"   { parse_vmlist() }
+		case "parse_hostlist" { parse_hostlist() }
+		case "survey_host"    { survey_host() }
 
 		else             { usage(); exit }
 	}
@@ -191,7 +201,11 @@ sub build {
 		my $vm_gateway   = prompt ("Gateway:", "221.133.213.1");
 		my $vm_resolver  = prompt ("DNS server:", "202.91.207.135");
 
-		# Figure out the MAC address based on the IP
+		# Figure out the MAC address based on the IP.
+		# WARNING: This is dangerous at the moment because it doesn't check if the
+		# generated MAC address actually conforms to requirements, and networking
+		# can be broken if certain digits are used in specific locations. This needs
+		# to be made more robust.
 		# Split the dotted quads into array elements
 		our @vm_mac = split(/\./, $vm_ipaddress);
 		# Make sure each element is padded to three digits so we have a 12-digit number
@@ -393,6 +407,7 @@ sub demolish {
 # Snapshot an existing VM to push it out to another node
 sub relocate {
 	print "Relocating an existing VM to another node\n";
+	print "NOT YET IMPLEMENTED\n";
 }
 
 
@@ -450,8 +465,9 @@ sub propagate {
 		$command = "ssh root\@${targetnode} mount /dev/mapper/${imagegroup}-${imagename}--root ${storagepath}/${imagename}.d/mnt";
 		runcommand ("$command", "Mounting VM root on target node...");
 
-		$command = "rsync -e ssh --delete -az root\@${sourcenode}:$storagepath/${imagename}.d/snapshot/ root\@${targetnode}:${storagepath}/${imagename}.d/mnt";
-		runcommand ("$command", "Pushing root filesystem to target node...");
+		#$command = "rsync -e ssh --delete -az root\@${sourcenode}:$storagepath/${imagename}.d/snapshot/ root\@${targetnode}:${storagepath}/${imagename}.d/mnt";
+		$command = "unison ssh://root\@${sourcenode}/$storagepath/${imagename}.d/snapshot ssh://root\@${targetnode}/${storagepath}/${imagename}.d/mnt -batch -silent -force ssh://root\@${sourcenode}/${storagepath}/${imagename}.d/snapshot";
+		runcommand ("$command", "Syncing root filesystem to target node...");
 
 		$command = "scp root\@${sourcenode}:$storagepath/${imagename}.d/${imagename} root\@${targetnode}:${storagepath}/${imagename}.d/";
 		runcommand ("$command", "Copying config file to target node...");
@@ -476,4 +492,78 @@ sub propagate {
 }
 
 
+
+####################################################################
+sub parse_vmlist {
+	my $vmlist_file = "/etc/xim/vmlist.conf";
+	my @vmlist;
+	my @vmdetails;
+	open VMLIST, $vmlist_file or die $!;
+
+	while (<VMLIST>)
+	{
+		s/#.*$//;	# Kill off comments
+		s/^\s+//;	# Kill off leading spaces
+		s/\s+$//;	# Kill off trailing spaces
+		if ($_)
+		{
+			my ($host, $copies, $interval) = split(/s*,s*/); # Split out the three values for each host
+			@vmdetails = ("$host", $copies, "$interval");
+			push(@vmlist, @vmdetails);
+			#print "val: $host | $copies | $interval |\n";
+		}
+	}
+
+	close VMLIST;
+	#print @vmlist;
+	return @vmlist;
+}
+
+
+####################################################################
+sub parse_hostlist {
+	my $hostlist_file = "/etc/xim/hostlist.conf";
+	my @hostlist;
+	#my $hostdetails;
+	open HOSTLIST, $hostlist_file or die $!;
+
+	while (<HOSTLIST>)
+	{
+		s/#.*$//;	# Kill off comments
+		s/^\s+//;	# Kill off leading spaces
+		s/\s+$//;	# Kill off trailing spaces
+		if ($_)
+		{
+			#my ($hostname, $ipaddress) = split(/s*,s*/); # Split out the values for each host
+			#$hostdetails = ($_);
+			push(@hostlist, $_);
+			#print "val: $hostname | $ipaddress |\n";
+		}
+	}
+
+	close HOSTLIST;
+	#print @hostlist;
+	return @hostlist;
+}
+
+
+####################################################################
+sub survey_host {
+	my $host
+}
+
+
+####################################################################
+sub survey {
+	my @hostlist = parse_hostlist();
+	my $hostdetails;
+	foreach $hostdetails (@hostlist)
+	{
+		my ($hostname, $ipaddress) = split(/s*,s*/, $hostdetails);
+		print $hostdetails."\n";
+		#print $hostname."\n";
+		#print $ipaddress."\n";
+		#print "\n";
+	}
+}
 
