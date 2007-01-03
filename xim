@@ -6,8 +6,8 @@ use warnings;
 
 # Set this to 1 to fake external command execution
 our $dryrun = 0;
-our $debug  = 1;
-our $silent = 1;
+our $debug  = 0;
+our $silent = 0;
 
 ####################################################################
 # xim: Xen Image Manager
@@ -522,7 +522,18 @@ sub parse_vmlist {
 
 ####################################################################
 sub survey_host {
-	my $host
+	my $ipaddress = shift(@_);
+	my $command;
+	my $output;
+
+	#print "h: $ipaddress\n";
+	$command = "ssh root\@${ipaddress} lvscan | grep '\\-root'";
+	$output = runcommand ("$command", "Checking for existing root images...");
+	print $output;
+	$command = "ssh root\@${ipaddress} xm list | grep -v 'Domain-0' | grep -v 'Name'";
+	$output = runcommand ("$command", "Checking for running VMs...");
+	print $output;
+	print "\n\n";
 }
 
 
@@ -535,9 +546,14 @@ sub survey {
 	open (CSV, "<", $hostlist_file) or die $!;
 	
 	while (<CSV>) {
+		next if ($. == 1); # Skip the first row. FIXME: Should just skip all rows starting with '#'
 		$csv->parse($_);
 		my @columns = $csv->fields();
-		print "Host: $columns[0]\nIP: $columns[1]\n\n";
+		#print "Host: $columns[0]\nIP: $columns[1]\n\n";
+		my $hostname = $columns[0];
+		my $ipaddress = $columns[1];
+		print "Processing host '$hostname' at '$ipaddress':\n";
+		survey_host("$ipaddress");
 	}
 }
 
