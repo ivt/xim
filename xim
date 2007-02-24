@@ -433,9 +433,13 @@ sub propagate {
 		runcommand ("$command", "Creating backup mount point on source node...");
 
 		# We're hard-coding a disk image size here, which is bad. Need to check size of local partition
-		#my $vm_disksize = `lvdisplay /dev/${imagegroup}/${imagename}-root | grep "LV Size" | awk '\{print \$3\}'`;
+		my $vm_disksize = `lvdisplay /dev/${imagegroup}/${imagename}-root | grep "LV Size" | awk '\{print \$3\}'`;
+		print "Unrounded: $vm_disksize\n";
+		$vm_disksize = ceil($vm_disksize);
+		print "Rounded: $vm_disksize\n";
 		my $vm_disksize = 25;
 		my $vm_disksizemb = $vm_disksize * 1000;
+
 		#$command = "ssh root\@${sourcenode} 'lvcreate -L${vm_disksizemb}M -s -n ${imagename}-snapshot /dev/$imagegroup/${imagename}-root'";
 		$command = "ssh root\@${sourcenode} 'lvcreate -L2000M -s -n \"${imagename}-snapshot\" /dev/$imagegroup/${imagename}-root'";
 		runcommand ("$command", "Creating the snapshot partition on source node...");
