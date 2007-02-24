@@ -248,7 +248,7 @@ sub build {
 		$command = "lvcreate -L${vm_disksizemb}M -n ${imagename}-root $imagegroup";
 		runcommand ("$command", "Creating the target root partition...");
 
-		$command = "mkfs.ext3 /dev/mapper/${imagegroup}-${imagename}--root";
+		$command = "mkfs.ext3 /dev/${imagegroup}/${imagename}-root";
 		runcommand ("$command", "Creating root filesystem on target root partition...");
 
 		$command = "mount /dev/$imagegroup/${imagename}-root $storagepath/$imagename.d/mnt/";
@@ -440,7 +440,7 @@ sub propagate {
 		$command = "ssh root\@${sourcenode} 'lvcreate -L2000M -s -n \"${imagename}-snapshot\" /dev/$imagegroup/${imagename}-root'";
 		runcommand ("$command", "Creating the snapshot partition on source node...");
 
-		$command = "ssh root\@${sourcenode} mount /dev/mapper/${imagegroup}-${imagename}--snapshot $storagepath/$imagename.d/snapshot/";
+		$command = "ssh root\@${sourcenode} mount /dev/${imagegroup}/${imagename}-snapshot $storagepath/$imagename.d/snapshot/";
 		runcommand ("$command", "Mounting snapshot...");
 #www.arsgeek.com/?p=650
 		
@@ -457,11 +457,11 @@ sub propagate {
 			$command = "ssh root\@${targetnode} lvcreate -L${vm_disksizemb}M -n \"${imagename}-root\" ${imagegroup}";
 			runcommand ("$command", "Creating VM root partition on target node...");
 
-			$command = "ssh root\@${targetnode} mkfs.ext3 /dev/mapper/${imagegroup}-${imagename}--root";
+			$command = "ssh root\@${targetnode} mkfs.ext3 /dev/${imagegroup}/${imagename}-root";
 			runcommand ("$command", "Creating VM root filesystem on target node...");
 		}
 
-		$command = "ssh root\@${targetnode} mount /dev/mapper/${imagegroup}-${imagename}--root ${storagepath}/${imagename}.d/mnt";
+		$command = "ssh root\@${targetnode} mount /dev/${imagegroup}/${imagename}-root ${storagepath}/${imagename}.d/mnt";
 		runcommand ("$command", "Mounting VM root on target node...");
 
 		#$command = "rsync -e ssh --delete -az root\@${sourcenode}:$storagepath/${imagename}.d/snapshot/ root\@${targetnode}:${storagepath}/${imagename}.d/mnt";
