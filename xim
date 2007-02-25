@@ -6,8 +6,8 @@ use strict;
 use warnings;
 
 # Set this to 1 to fake external command execution
-our $dryrun = 1;
-our $debug  = 1;
+our $dryrun = 0;
+our $debug  = 0;
 our $silent = 0;
 
 ####################################################################
@@ -447,18 +447,19 @@ sub propagate {
 
 		$command = "mount /dev/${imagegroup}/${imagename}-snapshot $storagepath/$imagename.d/snapshot/";
 		runcommand ("$command", "Mounting snapshot...");
-		#www.arsgeek.com/?p=650
+#www.arsgeek.com/?p=650
 		
 		$command = "ssh root\@${targetnode} mkdir -p ${storagepath}/${imagename}.d/mnt";
 		runcommand ("$command", "Making VM directory and mount point on target node...");
 
 		my $partitionexists = 0;
 		$command = "ssh root\@${targetnode} lvscan | grep ${imagename}-root | wc -l";
-		$partitionexists = runcommand ("$command", "Checking for VM root partition on target node...");
-		print "e: $partitionexists\n";
+		$partitionexists = runcommand2 ("$command", "Checking for VM root partition on target node...");
+		#print "e: $partitionexists\n";
 
-		$partitionexists = 0;
+		#$partitionexists = 1;
 		if ($partitionexists eq 0) {
+			#print "creating!\n";
 			$command = "ssh root\@${targetnode} lvcreate -L${vm_disksizemb}M -n \"${imagename}-root\" ${imagegroup}";
 			runcommand ("$command", "Creating VM root partition on target node...");
 
