@@ -447,7 +447,7 @@ sub propagate {
 
 		$command = "mount /dev/${imagegroup}/${imagename}-snapshot $storagepath/$imagename.d/snapshot/";
 		runcommand ("$command", "Mounting snapshot...");
-#www.arsgeek.com/?p=650
+		#www.arsgeek.com/?p=650
 		
 		$command = "ssh root\@${targetnode} mkdir -p ${storagepath}/${imagename}.d/mnt";
 		runcommand ("$command", "Making VM directory and mount point on target node...");
