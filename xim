@@ -476,7 +476,7 @@ sub propagate {
 		$command = "ssh root\@${targetnode} mount /dev/${imagegroup}/${imagename}-root ${storagepath}/${imagename}.d/mnt";
 		runcommand ("$command", "Mounting VM root on target node...");
 
-		$command = "rsync -e ssh --delete -az $storagepath/${imagename}.d/snapshot/ root\@${targetnode}:${storagepath}/${imagename}.d/mnt";
+		$command = "nice rsync -e ssh --delete -az $storagepath/${imagename}.d/snapshot/ root\@${targetnode}:${storagepath}/${imagename}.d/mnt";
 		#$command = "unison ssh://root\@${sourcenode}/$storagepath/${imagename}.d/snapshot ssh://root\@${targetnode}/${storagepath}/${imagename}.d/mnt -batch -silent -force ssh://root\@${sourcenode}/${storagepath}/${imagename}.d/snapshot";
 		runcommand ("$command", "Syncing root filesystem to target node...");
 
