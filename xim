@@ -384,11 +384,11 @@ sub demolish {
 		runcommand ("$command", "Destroying image...");
 
 		# lvremove root
-		$command = "lvremove /dev/${imagegroup}/${imagename}-root";
+		$command = "lvremove -f /dev/${imagegroup}/${imagename}-root";
 		runcommand ("$command", "Removing root partition...");
 
 		# Remove swap
-		$command = "lvremove /dev/${imagegroup}/${imagename}-swap";
+		$command = "lvremove -f /dev/${imagegroup}/${imagename}-swap";
 		runcommand ("$command", "Removing swap partition...");
 
 		# Remove the config directory
