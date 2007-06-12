@@ -433,10 +433,10 @@ sub xim_rename {
 		runcommand ("$command", "Renaming swap partition...");
 
 		# Rename the config directory
-		$command = "mv /${imagegroup}/${imagename}.d /{$imagegroup}/${newimagename}.d";
+		$command = "mv /${imagegroup}/${imagename}.d /${imagegroup}/${newimagename}.d";
 		runcommand ("$command", "Renaming config directory...");
 
-		$command = "mv /${imagegroup}/${newimagename}.d/{$imagename} /{$imagegroup}/${newimagename}.d/{$newimagename}";
+		$command = "mv /${imagegroup}/${newimagename}.d/${imagename} /${imagegroup}/${newimagename}.d/${newimagename}";
 		runcommand ("$command", "Renaming config file...");
 	} else {
 		print "Usage: xim rename <imagegroup> <imagename> <newimagename>\n";
