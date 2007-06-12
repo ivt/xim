@@ -46,6 +46,7 @@ if($ARGV[0])
 
 		# Native Xim operations
 		case "survey"    { survey() }
+		case "rename"    { rename() }
 		case "build"     { build() }
 		case "demolish"  { demolish() }
 		case "relocate"  { relocate() }
@@ -102,10 +103,11 @@ sub usage {
 	print "   unpause\n";
 	print "   vcpu-set\n";
 	print "Xim also supports these extended subcommands:\n";
-	print "   build <DomGroup> <DomName>              Create a new VM image and config\n";
-	print "   demolish <DomGroup> <DomName>           Destroy a VM and delete all its files\n";
-	print "   relocate <DomGroup> <DomName> <Host>    Migrate a running VM to another node\n";
-	print "   propagate <DomGroup> <DomName> <Host>   Make a backup of a VM on another node\n";
+	print "   build <DomGroup> <DomName>               Create a new VM image and config\n";
+	print "   rename <DomGroup> <DomName> <NewDomName> Rename an existing VM image\n";
+	print "   demolish <DomGroup> <DomName>            Destroy a VM and delete all its files\n";
+	print "   relocate <DomGroup> <DomName> <Host>     Migrate a running VM to another node\n";
+	print "   propagate <DomGroup> <DomName> <Host>    Make a backup of a VM on another node\n";
 	print "<DomGroup> is a way to arbitrarily group guest domains: each DomGroup is given\n";
 	print "its own Volume Group in LVM and managed at a separate mount point.\n";
 }
@@ -399,6 +401,50 @@ sub demolish {
 		print "   'demolish' will remove all traces of a VM from a specific node, or from\n";
 		print "   localhost if no host is specified: it destroys the running image if it\n";
 		print "   exists, then removes the config directory and partitions.\n";
+	}
+}
+
+
+####################################################################
+# Rename an existing VM on the same node
+sub rename {
+	# Check if we have enough arguments
+	if ( ($#ARGV + 1) eq 3 )
+	{
+		my $imagegroup    = $ARGV[1];
+		my $imagename     = $ARGV[2];
+		my $newimagename  = $ARGV[3];
+		my $storagepath = "/" . $imagegroup;
+
+		print "Renaming '${imagegroup}/${imagename}' to '${imagegroup}/${newimagename}'\n";
+
+		my $command = "";
+
+		# Shut down the image in case it's running.
+		$command = "xm shutdown $imagename";
+		runcommand ("$command", "Shutting down image...");
+
+		# Rename root
+		$command = "lvrename /dev/${imagegroup}/${imagename}-root /dev/${imagegroup}/${newimagename}-root";
+		runcommand ("$command", "Renaming root partition...");
+
+		# Rename swap
+		$command = "lvrename /dev/${imagegroup}/${imagename}-swap /dev/${imagegroup}/${newimagename}-swap";
+		runcommand ("$command", "Renaming swap partition...");
+
+		# Rename the config directory
+		$command = "mv /${imagegroup}/${imagename}.d /$imagegroup}/${newimagename}.d";
+		runcommand ("$command", "Renaming config directory...");
+
+		$command = "mv /${imagegroup}/${newimagename}.d/{$imagename} /$imagegroup}/${newimagename}.d/{$newimagename}";
+		runcommand ("$command", "Renaming config file...");
+	} else {
+		print "Usage: xim rename <imagegroup> <imagename> <newimagename>\n";
+		print "   'rename' will convert an existing VM to a new name, including moving\n";
+		print "   the config file and renaming LVM partitions. It first tries to shut down\n";
+		print "   the VM to prevent damage if the partition is in use. It does not yet edit\n";
+		print "   the actual config file or change any settings inside the VM such as IP\n";
+		print "   address.\n";
 	}
 }
 
