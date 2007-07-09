@@ -439,6 +439,12 @@ sub xim_rename {
 
 		$command = "mv /${imagegroup}/${newimagename}.d/${imagename} /${imagegroup}/${newimagename}.d/${newimagename}";
 		runcommand ("$command", "Renaming config file...");
+
+		$command = "sed -e \"s/${imagename}/${newimagename}/g\" ${storagepath}/${newimagename}.d/${newimagename} > ${storagepath}/${newimagename}.d/${newimagename}.temp";
+		runcommand ("$command", "Modifying config file...");
+		$command = "mv ${storagepath}/${newimagename}.d/${newimagename}.temp ${storagepath}/${newimagename}.d/${newimagename}";
+		runcommand ("$command", "Moving config file...");
+
 	} else {
 		print "Usage: xim rename <imagegroup> <imagename> <newimagename>\n";
 		print "   'rename' will convert an existing VM to a new name, including moving\n";
@@ -622,7 +628,7 @@ sub duplicate {
 		$command = "cp $storagepath/${imagename}.d/${imagename} ${storagepath}/${targetname}.d/${targetname}";
 		runcommand ("$command", "Copying config file...");
 
-		$command = "sed -e \"s/${imagename}/${targetname}/\" ${storagepath}/${targetname}.d/${targetname} ${storagepath}/${targetname}.d/${targetname}.temp";
+		$command = "sed -e \"s/${imagename}/${targetname}/g\" ${storagepath}/${targetname}.d/${targetname} > ${storagepath}/${targetname}.d/${targetname}.temp";
 		runcommand ("$command", "Modifying config file...");
 		$command = "mv ${storagepath}/${targetname}.d/${targetname}.temp ${storagepath}/${targetname}.d/${targetname}";
 		runcommand ("$command", "Moving config file...");
