@@ -622,6 +622,11 @@ sub duplicate {
 		$command = "cp $storagepath/${imagename}.d/${imagename} ${storagepath}/${targetname}.d/${targetname}";
 		runcommand ("$command", "Copying config file...");
 
+		$command = "sed -e \"s/${imagename}/${targetname}/\" ${storagepath}/${targetname}.d/${targetname} ${storagepath}/${targetname}.d/${targetname}.temp";
+		runcommand ("$command", "Modifying config file...");
+		$command = "mv ${storagepath}/${targetname}.d/${targetname}.temp ${storagepath}/${targetname}.d/${targetname}";
+		runcommand ("$command", "Moving config file...");
+
 		$command = "umount ${storagepath}/${imagename}.d/snapshot";
 		runcommand ("$command", "Unmounting source image snapshot...");
 
