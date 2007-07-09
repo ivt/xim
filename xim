@@ -51,6 +51,7 @@ if($ARGV[0])
 		case "demolish"  { demolish() }
 		case "relocate"  { relocate() }
 		case "propagate" { propagate() }
+		case "duplicate" { duplicate() }
 
 		# Direct access to internal functions for testing
 		case "parse_vmlist"   { parse_vmlist() }
@@ -545,6 +546,101 @@ sub propagate {
 		print "Usage: xim propagate <imagegroup> <imagename> <Target Node>\n";
 		print "   'propagate' copies the config and partitions of a VM to another\n";
 		print "   node. If a copy already exists on the remote node it's updated.\n";
+	}
+}
+
+
+####################################################################
+# Snapshot an existing VM and duplicate it on the same node with a different name
+sub duplicate {
+	# Check if we have enough arguments
+	if ( ($#ARGV + 1) eq 4 )
+	{
+		my $imagegroup = $ARGV[1];
+		my $imagename  = $ARGV[2];
+		#my $sourcenode = $ARGV[3];
+		my $targetname = $ARGV[3];
+		my $storagepath = "/".${imagegroup};
+		print "Duplicating '${imagegroup}/${imagename}' to '${imagegroup}/${targetname}'\n";
+		# lvcreate -L500M -s -n imagename-snapshot /dev/imagegroup/imagename-root
+
+		my $command = "";
+
+		$command = "modprobe dm-snapshot";
+		runcommand ("$command", "Loading snapshot device-mapper kernel module...");
+
+		#$command = "ssh root\@${sourcenode} 'mkdir -p $storagepath/$imagename.d/snapshot'";
+		$command = "mkdir -p $storagepath/$imagename.d/snapshot";
+		runcommand ("$command", "Creating source image mount point...");
+
+		# We're hard-coding a disk image size here, which is bad. Need to check size of local partition
+		my $vm_disksize = `lvdisplay /dev/${imagegroup}/${imagename}-root | grep "LV Size" | awk '\{print \$3\}'`;
+		print "Unrounded: $vm_disksize\n";
+		$vm_disksize = ceil($vm_disksize);
+		print "Rounded: $vm_disksize\n";
+		#my $vm_disksize = 25;
+		my $vm_disksizemb = $vm_disksize * 1000;
+
+		$command = "lvcreate -L2000M -s -n \"${imagename}-snapshot\" /dev/$imagegroup/${imagename}-root";
+		runcommand ("$command", "Creating source image snapshot...");
+
+		$command = "mount /dev/${imagegroup}/${imagename}-snapshot $storagepath/$imagename.d/snapshot/";
+		runcommand ("$command", "Mounting source image snapshot...");
+#www.arsgeek.com/?p=650
+		
+		$command = "mkdir -p ${storagepath}/${targetname}.d/mnt";
+		runcommand ("$command", "Making target image directory and mount point...");
+
+		my $partitionexists = 0;
+		$command = "lvscan | grep ${targetname}-root | wc -l";
+		$partitionexists = runcommand2 ("$command", "Checking for target image root partition...");
+		#print "e: $partitionexists\n";
+
+		#$partitionexists = 1;
+		if ($partitionexists eq 0) {
+			#print "creating!\n";
+			$command = "lvcreate -L${vm_disksizemb}M -n \"${targetname}-root\" ${imagegroup}";
+			runcommand ("$command", "Creating target image root partition...");
+
+			$command = "mkfs.ext3 /dev/${imagegroup}/${targetname}-root";
+			runcommand ("$command", "Creating target image root filesystem...");
+
+			$command = "lvcreate -L200M -n \"${targetname}-swap\" ${imagegroup}";
+			runcommand ("$command", "Creating target image swap partition...");
+
+			$command = "mkswap /dev/${imagegroup}/${targetname}-swap";
+			runcommand ("$command", "Creating target image swap filesystem...");
+		}
+
+		$command = "mount /dev/${imagegroup}/${targetname}-root ${storagepath}/${targetname}.d/mnt";
+		runcommand ("$command", "Mounting target image root filesystem...");
+
+		$command = "nice rsync --delete -az $storagepath/${imagename}.d/snapshot/ ${storagepath}/${targetname}.d/mnt";
+		#$command = "unison ssh://root\@${sourcenode}/$storagepath/${imagename}.d/snapshot ssh://root\@${targetnode}/${storagepath}/${imagename}.d/mnt -batch -silent -force ssh://root\@${sourcenode}/${storagepath}/${imagename}.d/snapshot";
+		runcommand ("$command", "Syncing root filesystem...");
+
+		$command = "cp $storagepath/${imagename}.d/${imagename} ${storagepath}/${targetname}.d/${targetname}";
+		runcommand ("$command", "Copying config file...");
+
+		$command = "umount ${storagepath}/${imagename}.d/snapshot";
+		runcommand ("$command", "Unmounting source image snapshot...");
+
+		$command = "lvremove -f /dev/${imagegroup}/${imagename}-snapshot";
+		runcommand ("$command", "Removing source snapshot partition...");
+
+		$command = "umount ${storagepath}/${targetname}.d/mnt";
+		runcommand ("$command", "Unmounting target image root filesystem...");
+
+#		$command = "";
+#		runcommand ("$command", "...");
+
+	} else {
+		print "Usage: xim duplicate <imagegroup> <imagename> <targetname>\n";
+		print "   'duplicate' copies the config and partitions of a VM to create\n";
+		print "   a duplicate VM with a different name. If the target name already\n";
+		print "   exists it's updated to match the target. This operation is\n";
+		print "   useful for either making local backups of running VMs or copying\n";
+		print "   an existing VM to run it under a different name.\n";
 	}
 }
 
