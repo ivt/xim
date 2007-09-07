@@ -1,4 +1,25 @@
 #!/usr/bin/perl
+# xim (Xen Image Manager) uses LVM to manage Xen virtual machine images
+# @author Jonathan Oxer <jon@ivt.com.au>
+# @copyright 2006-2007 Internet Vision Technologies <www.ivt.com.au>
+# @version 0.3
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+#
+# cpan install Text::CSV
+
 use Switch;
 use POSIX;
 #use Text::CSV;
@@ -11,15 +32,6 @@ our $debug  = 0;
 our $silent = 0;
 
 ####################################################################
-# xim: Xen Image Manager
-#
-# Creates the disk image and configuration for a new Xen virtual machine
-#
-# @version 0.1 20060803
-# @version 0.2 20060905
-# @author Jonathan Oxer <jon@ivt.com.au>
-# @copyright 2006 Internet Vision Technologies <www.ivt.com.au>
-# cpan install Text::CSV
 ####################################################################
 # Figure out what command we've been called with. Initially, many of
 # the commands will just be wrappers to xm and will pass arguments
