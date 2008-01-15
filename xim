@@ -27,8 +27,8 @@ use strict;
 use warnings;
 
 # Set this to 1 to fake external command execution
-our $dryrun = 0;
-our $debug  = 0;
+our $dryrun = 1;
+our $debug  = 1;
 our $silent = 0;
 
 ####################################################################
@@ -120,7 +120,7 @@ sub usage {
 	print "   rename <DomGroup> <DomName> <NewDomName> Rename an existing VM image\n";
 	print "   demolish <DomGroup> <DomName>            Destroy a VM and delete all its files\n";
 	print "   relocate <DomGroup> <DomName> <Host>     Migrate a running VM to another node\n";
-	print "   propagate <DomGroup> <DomName> <Host>    Make a backup of a VM on another node\n";
+	print "   propagate <Group> <Dom0> <TargetHost> [TargetGroup] [TargetDom0]   Make a backup of a VM on another node\n";
 	print "<DomGroup> is a way to arbitrarily group guest domains: each DomGroup is given\n";
 	print "its own Volume Group in LVM and managed at a separate mount point.\n";
 }
@@ -436,6 +436,10 @@ sub xim_rename {
 		# Shut down the image in case it's running.
 		$command = "xm shutdown $imagename";
 		runcommand ("$command", "Shutting down image...");
+		# Wait a bit to give it time to clean up
+		print "Waiting for VM to shut down...";
+		sleep 20 ;
+		print "done\n";
 
 		# Rename root
 		$command = "lvrename /dev/${imagegroup}/${imagename}-root /dev/${imagegroup}/${newimagename}-root";
@@ -479,27 +483,59 @@ sub relocate {
 ####################################################################
 # Snapshot an existing VM to push it out to another node
 sub propagate {
+
+	my $imagegroup;
+	my $imagename;
+	my $targetnode;
+	my $targetgroup;
+	my $targetname;
+
 	# Check if we have enough arguments
+
 	if ( ($#ARGV + 1) eq 4 )
 	{
-		my $imagegroup = $ARGV[1];
-		my $imagename  = $ARGV[2];
-		#my $sourcenode = $ARGV[3];
-		my $targetnode = $ARGV[3];
-		my $storagepath = "/".${imagegroup};
-		print "Propagating '${imagegroup}/${imagename}' to '${targetnode}'\n";
-		# lvcreate -L500M -s -n imagename-snapshot /dev/imagegroup/imagename-root
+		$imagegroup  = $ARGV[1];
+		$imagename   = $ARGV[2];
+		$targetnode  = $ARGV[3];
+		$targetgroup = $imagegroup;
+		$targetname  = $imagename;
+	}
+	elsif ( ($#ARGV + 1) eq 5 )
+	{
+		$imagegroup  = $ARGV[1];
+		$imagename   = $ARGV[2];
+		$targetnode  = $ARGV[3];
+		$targetgroup = $ARGV[4];
+		$targetname  = $imagename;
+	}
+	elsif ( ($#ARGV + 1) eq 6 )
+	{
+		$imagegroup  = $ARGV[1];
+		$imagename   = $ARGV[2];
+		$targetnode  = $ARGV[3];
+		$targetgroup = $ARGV[4];
+		$targetname  = $ARGV[5];
+	}
+	else
+	{
+		print "Usage: xim propagate <imagegroup> <imagename> <Target Node>\n";
+		print "   'propagate' copies the config and partitions of a VM to another\n";
+		print "   node. If a copy already exists on the remote node it's updated.\n";
+		exit;
+	}
 
-		my $command = "";
+		print "Propagating 'localhost:${imagegroup}/${imagename}' to '${targetnode}:${targetgroup}/${targetname}'\n";
+
+		my $storagepath       = "/".${imagegroup};
+		my $targetstoragepath = "/".${targetgroup};
+		my $command           = "";
 
 		$command = "modprobe dm-snapshot";
 		runcommand ("$command", "Loading snapshot device-mapper kernel module on source node...");
 
-		#$command = "ssh root\@${sourcenode} 'mkdir -p $storagepath/$imagename.d/snapshot'";
 		$command = "mkdir -p $storagepath/$imagename.d/snapshot";
 		runcommand ("$command", "Creating backup mount point on source node...");
 
-		# We're hard-coding a disk image size here, which is bad. Need to check size of local partition
 		my $vm_disksize = `lvdisplay /dev/${imagegroup}/${imagename}-root | grep "LV Size" | awk '\{print \$3\}'`;
 		print "Unrounded: $vm_disksize\n";
 		$vm_disksize = ceil($vm_disksize);
@@ -513,39 +549,39 @@ sub propagate {
 		$command = "mount /dev/${imagegroup}/${imagename}-snapshot $storagepath/$imagename.d/snapshot/";
 		runcommand ("$command", "Mounting snapshot...");
 #www.arsgeek.com/?p=650
-		
-		$command = "ssh root\@${targetnode} mkdir -p ${storagepath}/${imagename}.d/mnt";
+
+		$command = "ssh root\@${targetnode} mkdir -p ${targetstoragepath}/${targetname}.d/mnt";
 		runcommand ("$command", "Making VM directory and mount point on target node...");
 
 		my $partitionexists = 0;
-		$command = "ssh root\@${targetnode} lvscan | grep ${imagename}-root | wc -l";
+		$command = "ssh root\@${targetnode} lvscan | grep ${targetname}-root | wc -l";
 		$partitionexists = runcommand2 ("$command", "Checking for VM root partition on target node...");
 		#print "e: $partitionexists\n";
 
 		#$partitionexists = 1;
 		if ($partitionexists eq 0) {
 			#print "creating!\n";
-			$command = "ssh root\@${targetnode} lvcreate -L${vm_disksizemb}M -n \"${imagename}-root\" ${imagegroup}";
+			$command = "ssh root\@${targetnode} lvcreate -L${vm_disksizemb}M -n \"${targetname}-root\" ${targetgroup}";
 			runcommand ("$command", "Creating VM root partition on target node...");
 
-			$command = "ssh root\@${targetnode} mkfs.ext3 /dev/${imagegroup}/${imagename}-root";
+			$command = "ssh root\@${targetnode} mkfs.ext3 /dev/${targetgroup}/${targetname}-root";
 			runcommand ("$command", "Creating VM root filesystem on target node...");
 
-			$command = "ssh root\@${targetnode} lvcreate -L200M -n \"${imagename}-swap\" ${imagegroup}";
+			$command = "ssh root\@${targetnode} lvcreate -L200M -n \"${targetname}-swap\" ${targetgroup}";
 			runcommand ("$command", "Creating VM swap partition on target node...");
 
-			$command = "ssh root\@${targetnode} mkswap /dev/${imagegroup}/${imagename}-swap";
+			$command = "ssh root\@${targetnode} mkswap /dev/${targetgroup}/${targetname}-swap";
 			runcommand ("$command", "Creating VM swap filesystem on target node...");
 		}
 
-		$command = "ssh root\@${targetnode} mount /dev/${imagegroup}/${imagename}-root ${storagepath}/${imagename}.d/mnt";
+		$command = "ssh root\@${targetnode} mount /dev/${targetgroup}/${targetname}-root ${targetstoragepath}/${targetname}.d/mnt";
 		runcommand ("$command", "Mounting VM root on target node...");
 
-		$command = "nice rsync -e ssh --delete -az $storagepath/${imagename}.d/snapshot/ root\@${targetnode}:${storagepath}/${imagename}.d/mnt";
+		$command = "nice rsync -e ssh --delete -az $storagepath/${imagename}.d/snapshot/ root\@${targetnode}:${targetstoragepath}/${targetname}.d/mnt";
 		#$command = "unison ssh://root\@${sourcenode}/$storagepath/${imagename}.d/snapshot ssh://root\@${targetnode}/${storagepath}/${imagename}.d/mnt -batch -silent -force ssh://root\@${sourcenode}/${storagepath}/${imagename}.d/snapshot";
 		runcommand ("$command", "Syncing root filesystem to target node...");
 
-		$command = "scp $storagepath/${imagename}.d/${imagename} root\@${targetnode}:${storagepath}/${imagename}.d/";
+		$command = "scp $storagepath/${imagename}.d/${imagename} root\@${targetnode}:${targetstoragepath}/${targetname}.d/${targetname}";
 		runcommand ("$command", "Copying config file to target node...");
 
 		$command = "umount ${storagepath}/${imagename}.d/snapshot";
@@ -554,17 +590,12 @@ sub propagate {
 		$command = "lvremove -f /dev/${imagegroup}/${imagename}-snapshot";
 		runcommand ("$command", "Removing snapshot partition on source node...");
 
-		$command = "ssh root\@${targetnode} \"umount ${storagepath}/${imagename}.d/mnt\"";
+		$command = "ssh root\@${targetnode} \"umount ${targetstoragepath}/${targetname}.d/mnt\"";
 		runcommand ("$command", "Unmounting root filesystem on target node...");
 
 #		$command = "";
 #		runcommand ("$command", "...");
 
-	} else {
-		print "Usage: xim propagate <imagegroup> <imagename> <Target Node>\n";
-		print "   'propagate' copies the config and partitions of a VM to another\n";
-		print "   node. If a copy already exists on the remote node it's updated.\n";
-	}
 }
 
 
